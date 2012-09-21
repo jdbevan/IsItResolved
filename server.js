@@ -15,8 +15,8 @@ var dns = require('dns'),
 		//			e.g. /example.com/NS/john@mail.com/once
 		//			e.g. /example.com/NS/john@mail.com/always
 		
-   		response.writeHead(200, {'Content-Type': 'text/plain'});
-   		
+		response.writeHead(200, {'Content-Type': 'text/plain'});
+		
 		var args = request.url.split('/'),
 			validRecords = ['A', 'AAAA', 'MX', 'TXT', 'SRV', 'PTR', 'NS', 'CNAME'],
 			host = args[1],
@@ -119,8 +119,8 @@ var dns = require('dns'),
 			return;
 		}
 		
-	    // Log request
-	    console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
+		// Log request
+		console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
 
 		// Print information about request
 		if (isIP) {
