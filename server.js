@@ -116,35 +116,33 @@ var dns = require('dns'),
 	    // Log request
 	    console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
 
-			if (isAddress && record == 'PTR') {
-				response.end(record + " is only a valid DNS lookup for IP addresses.\n");
+		// Print information about request
+		if (isIP) {
+			if (isProtectedIP) {
+				response.end(record + " is a valid, RFC 1918 protected, IP address\n");
 				return;
-			}
-
-			response.write("Lookup the " + record + " record for " + host + "\n");
-
-			if (isAddress) {
-				dns.resolve(host, record, function (err, addresses) {
-					if (err) throw err;
-
-					response.write('addresses: ' + JSON.stringify(addresses) + "\n");
-					//console.log('addresses: ' + JSON.stringify(addresses) + "\n");
-				    response.end('Hello World\n');
-
-					// A record specific
-					/*addresses.forEach(function (a) {
-						dns.reverse(a, function (err, domains) {
-							if (err) {
-								throw err;
-							}
-
-						  	console.log('reverse for ' + a + ': ' + JSON.stringify(domains));
-						});
-					});*/
-				});
 			} else {
-				dns.reverse(host, function (err, domains) {
-					if (err) throw err;
+				response.write(record + " is a valid IP address\n");
+			}
+		} else if (isAddress) {
+			response.write(host + " is (hopefully) a valid domain name\n");
+		} else {
+			response.end(record + " does not appear to be a valid domain name or IP address\n");
+			return;
+		}
+
+		// Handle DKIM
+		var selector = record.match(/^DKIM:([a-zA-Z0-9-_.]+)$/);
+		if (selector) {
+			record = 'TXT';
+			host = selector[1] + '._domainkey.' + host;
+		
+		} else if (validRecords.indexOf(record) < 0) {
+			response.write(record + " is not a valid/supported DNS record type.\n");
+			response.write("Please try: A, AAAA, MX, TXT, SRV, NS or CNAME lookups for domain names and PTR lookups for IP addresses.\n");
+			response.end("DKIM lookups can also be performed by specifying DKIM:<selector> as the dns record type.\n");
+			return;
+		}
 
 					response.write('domains: ' + JSON.stringify(domains) + "\n");
 					//console.log('domains: ' + JSON.stringify(domains) + "\n");
@@ -156,5 +154,7 @@ var dns = require('dns'),
 	
 	// It listens on port 1337 and IP 127.0.0.1
 	server.listen(1337, "127.0.0.1");
+	
 	// For the joy
 	console.log('Server running at <a href="http://127.0.0.1:1337/">http://127.0.0.1:1337/</a>');
+	
