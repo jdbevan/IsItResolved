@@ -144,12 +144,35 @@ var dns = require('dns'),
 			return;
 		}
 
+		if (isAddress && record == 'PTR') {
+			response.end(record + " is only a valid DNS lookup for IP addresses.\n");
+			return;
+		}
+		// Print action to be performed
+		response.write("Looking up the " + record + " record for " + host + "\n");
+		
+		// TODO: convert to https://npmjs.org/package/native-dns
+		// TODO: store results in MongoDB
+		if (isAddress) {
+			dns.resolve(host, record, function (err, hosts) {
+				if (err) {
+					//throw err;
+					response.write( errorHandler(err) + "\n" );
+				} else {
+					response.write('records: ' + JSON.stringify(hosts) + "\n");
+				}
+			    response.end();
+			});
+		} else {
+			dns.reverse(host, function (err, domains) {
+				if (err) {
+					response.write( errorHandler( err ) + "\n" );
+				} else {
 					response.write('domains: ' + JSON.stringify(domains) + "\n");
-					//console.log('domains: ' + JSON.stringify(domains) + "\n");
-				    response.end('Hello World\n');
-				});
-			}
-
+				}
+			    response.end();
+			});
+		}
 	});
 	
 	// It listens on port 1337 and IP 127.0.0.1
