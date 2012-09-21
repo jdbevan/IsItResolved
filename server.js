@@ -104,10 +104,17 @@ var dns = require('dns'),
 				return errorMsg;
 			};
 
-			if (validRecords.indexOf(record) < 0) {
-				response.end(record + " is not a valid/supported DNS record type.\n");
-				return;
-			}
+		// Check request matches expected format
+		if (!request.url.match(/\/[a-zA-Z0-9-.]+\/[A-Za-z:]+/)) {
+			response.write("Requests should be in the format: /<domain name or ip address>/<dns record type>\n");
+			response.write("\nWe currently support: A, AAAA, MX, TXT, SRV, NS and CNAME lookups for domain names and PTR record lookups for ip addresses.\n");
+			response.write("DKIM records can also be checked by specifying DKIM:<selector> as the dns record type.\n");
+			response.end();
+			return;
+		}
+		
+	    // Log request
+	    console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
 
 			if (isAddress && record == 'PTR') {
 				response.end(record + " is only a valid DNS lookup for IP addresses.\n");
