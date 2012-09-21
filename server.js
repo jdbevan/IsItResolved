@@ -2,34 +2,107 @@ var dns = require('dns'),
 	http = require('http'),
 	
 	server = http.createServer(function (request, response) {
-		    // Every request outputs "hello world"
-    		response.writeHead(200, {'Content-Type': 'text/plain'});
-			// response.write( request.url + '\n' );
-
-		    // And also logs
-		    console.log('Page requested at ' + new Date() + ', for ' + request.url);
-
-			var args = request.url.split('/'),
-				validRecords = ['A', 'AAAA', 'MX', 'TXT', 'SRV', 'PTR', 'NS', 'CNAME'],
-				host = args[1],
-				record = args[2],
-				isIP = host.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/),
-				isProtectedIP = isIP ? host.match(/^(192\.168|172\.1[6789]|172\.2[0-9]|172\.3[01]|10)\./) : false,
-				isAddress = host.match(/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/);
-
-			if (isIP) {
-				if (isProtectedIP) {
-					response.end(record + " is a valid, RFC 1918 protected, IP address\n");
-					return;
+			
+		// TODO: implement rate limiting of some sort?
+		// TODO: return different HTTP Response codes dependent on request content/success?
+		// TODO: allow specification of email alert on DNS change
+		//			e.g. /example.com/NS/john@mail.com/once
+		//			e.g. /example.com/NS/john@mail.com/always
+		
+   		response.writeHead(200, {'Content-Type': 'text/plain'});
+   		
+		var args = request.url.split('/'),
+			validRecords = ['A', 'AAAA', 'MX', 'TXT', 'SRV', 'PTR', 'NS', 'CNAME'],
+			host = args[1],
+			record = args[2],
+			isIP = host.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/),
+			isProtectedIP = isIP ? host.match(/^(192\.168|172\.1[6789]|172\.2[0-9]|172\.3[01]|10)\./) : false,
+			isAddress = host.match(/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/),
+			errorHandler = function(e) {
+				var errorMsg = 'Sorry, ';
+				if (e.code != undefined) {
+					switch (e.code) {
+						case dns.NODATA:
+							errorMsg += 'no data found.';
+							break;
+						case dns.FORMERR:
+							errorMsg += 'my bad, I sent a misformatted query. Apparently.';
+							break;
+						case dns.SERVFAIL:
+							errorMsg += 'there was a generic server failure. Press any key...';
+							break;
+						case dns.NOTFOUND:
+							errorMsg += 'the internetz don\'t recognise that domain name.';
+							break;
+						case dns.NOTIMP:
+							errorMsg += 'that request isn\'t supported by the server.';
+							break;
+						case dns.REFUSED:
+							errorMsg += 'computer says no.';
+							break;
+						case dns.BADQUERY:
+							errorMsg += 'misformatted DNS query.';
+							break;
+						case dns.BADNAME:
+							errorMsg += 'that domain name is a state.';
+							break;
+						case dns.BADFAMILY:
+							errorMsg += 'I don\'t support that kind of address.';
+							break;
+						case dns.BADRESP:
+							errorMsg += 'garbled voicemail.';
+							break;
+						case dns.CONNREFUSED:
+							errorMsg += 'no dial tone.';
+							break;
+						case dns.TIMEOUT:
+							errorMsg += 'I gave up waiting.';
+							break;
+						case dns.EOF:
+							errorMsg += 'I was cut short.';
+							break;
+						case dns.FILE:
+							errorMsg += 'permissions issue.';
+							break;
+						case dns.NOMEM:
+							errorMsg += 'please install more RAM.';
+							break;
+						case dns.DESTRUCTION:
+							errorMsg += 'Apocalypse Now!';
+							break;
+						case dns.BADSTR:
+							errorMsg += 'your string\'s in a mess.';
+							break;
+						case dns.BADFLAGS:
+							errorMsg += 'that\'s an illegal flag.';
+							break;
+						case dns.NONAME:
+							errorMsg += 'that hostname was not numeric.';
+							break;
+						case dns.BADHINTS:
+							errorMsg += 'those were illegal hints flags.';
+							break;
+						case dns.NOTINITIALIZED:
+							errorMsg += 'jumped the gun.';
+							break;
+						case dns.LOADIPHLPAPI:
+							errorMsg += 'DLL hell.';
+							break;
+						case dns.ADDRGETNETWORKPARAMS:
+							errorMsg += 'I couldn\'t find my network settings.';
+							break;
+						case dns.CANCELLED:
+							errorMsg += 'that request was cancelled. You will be refunded.';
+							break;
+						default:
+							errorMsg += 'unknown error...' + JSON.stringify(e);
+							break;
+					}
 				} else {
-					response.write(record + " is a valid IP address\n");
+					errorMsg += JSON.stringify(e);
 				}
-			} else if (isAddress) {
-				response.write(host + " is (hopefully) a valid domain name\n");
-			} else {
-				response.end(record + " does not appear to be a valid domain name or IP address\n");
-				return;
-			}
+				return errorMsg;
+			};
 
 			if (validRecords.indexOf(record) < 0) {
 				response.end(record + " is not a valid/supported DNS record type.\n");
