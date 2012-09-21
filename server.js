@@ -1,6 +1,12 @@
 var dns = require('dns'),
 	http = require('http'),
+	mongo = require('mongodb'),
 	
+	/* Setup mongo server connection */
+	mongoServer = new mongo.Server('localhost', 27017, {auto_reconnect:true}),
+	db = mongo.Db('dns', mongoServer),
+	
+	/* Setup web server */
 	server = http.createServer(function (request, response) {
 			
 		// TODO: implement rate limiting of some sort?
@@ -160,8 +166,16 @@ var dns = require('dns'),
 					response.write( errorHandler(err) + "\n" );
 				} else {
 					response.write('records: ' + JSON.stringify(hosts) + "\n");
+					
+					db.collection('hosts', function(err, collection) {
+						collection.update( {'host':host, 'dns':record}, {$set:{'response':hosts, 'time':(new Date()).getTime() }},
+											{safe:true, upsert: true},
+											function(err,result) {
+												//console.log(err);
+											});
+					});
 				}
-			    response.end();
+				response.end();
 			});
 		} else {
 			dns.reverse(host, function (err, domains) {
@@ -170,14 +184,20 @@ var dns = require('dns'),
 				} else {
 					response.write('domains: ' + JSON.stringify(domains) + "\n");
 				}
-			    response.end();
+				response.end();
 			});
 		}
 	});
 	
-	// It listens on port 1337 and IP 127.0.0.1
-	server.listen(1337, "127.0.0.1");
-	
-	// For the joy
-	console.log('Server running at <a href="http://127.0.0.1:1337/">http://127.0.0.1:1337/</a>');
-	
+db.open(function(err,db) {
+	if (!err) {
+		// Setup collection if it doesnt exist
+		db.createCollection('hosts', function(err, collection) {});
+	}
+});
+
+// It listens on port 1337 and IP 127.0.0.1
+server.listen(1337);
+
+// For the joy
+console.log('Server running at <a href="http://127.0.0.1:1337/">http://127.0.0.1:1337/</a>');
