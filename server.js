@@ -168,7 +168,7 @@ var dns = require('dns'),
 					response.write('records: ' + JSON.stringify(hosts) + "\n");
 					
 					db.collection('hosts', function(err, collection) {
-						collection.update( {'host':host, 'dns':record}, {$set:{'response':hosts, 'time':(new Date()).getTime() }},
+						collection.update( {'host':host, 'dns':record, 'response':hosts}, {$set:{'time':(new Date()).getTime() }},
 											{safe:true, upsert: true},
 											function(err,result) {
 												//console.log(err);
@@ -183,6 +183,14 @@ var dns = require('dns'),
 					response.write( errorHandler( err ) + "\n" );
 				} else {
 					response.write('domains: ' + JSON.stringify(domains) + "\n");
+
+					db.collection('hosts', function(err, collection) {
+						collection.update( {'host':host, 'dns':record, 'response':domains}, {$set:{'time':(new Date()).getTime() }},
+											{safe:true, upsert: true},
+											function(err,result) {
+												//console.log(err);
+											});
+					});
 				}
 				response.end();
 			});
