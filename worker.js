@@ -1,9 +1,6 @@
-var dns = require('dns'),
-	mongo = require('mongodb'),
-	mailer = require('nodemailer'),
-	smtp = mailer.createTransport("SMTP",{
-		service: "Edge of the Web"
-	}),
+var mongo = require('mongodb'),
+	dns = require('./checker'),
+	mailer = require('./mailer'),
 	
 	/* Setup mongo server connection */
 	mongoServer = new mongo.Server('localhost', 27017, {auto_reconnect:true}),
@@ -19,17 +16,34 @@ db.open(function(err,db) {
 			// array of items. If you have a big resultset you could run into memory issues.
 			// collection.find().toArray(function(err, items){});
 			
-			var stream = collection.find().streamRecords();
+			var stream = collection.find().streamRecords(),
+				changed = [];
 			stream.on("data", function(item) {
 				// perform DNS lookup with this host + dns record type
-				
-				// update collection
+				if (dns.checkRequest(host, record, false)) {
+					dns.lookup(host, record, false, function(dnsData) {
+						if (dnsData) {
+							// update collection
+							db.collection('hosts', function(err, collection) {
+								collection.update( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response}, {$set:{'time':dnsData.time }},
+													{safe:true, upsert: true},
+													function(err,result) {
+														//console.log(err);
+													});
+							});
+						}
+					});
+				}
 				
 				// if response was different, send email
 				
 			});
 			stream.on("end", function() {
 				// no more records
+				mailer.sendEmail("Jon Bevan <jon@wearesomethingsimple.com>",
+								"Jon Bevan <jon@edgeoftheweb.co.uk>",
+								"Node.js Test 2",
+								email);
 			});
 
 		});
