@@ -47,6 +47,8 @@ var http = require('http'),
 					response.end();
 				}
 			});
+		} else {
+			response.end();
 		}
 	});
 	
