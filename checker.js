@@ -21,6 +21,7 @@ var dns = require('dns'),
 					}
 					callback(false);
 				} else {
+					hosts.sort();
 					if (response) {
 						response.write('records: ' + JSON.stringify(hosts) + "\n");
 					}
@@ -35,6 +36,7 @@ var dns = require('dns'),
 					}
 					callback(false);
 				} else {
+					domains.sort();
 					if (response) {
 						response.write('domains: ' + JSON.stringify(domains) + "\n");
 					}
