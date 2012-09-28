@@ -5,7 +5,7 @@ var mongo = require('mongodb'),
 	/* Setup mongo server connection */
 	mongoServer = new mongo.Server('localhost', 27017, {auto_reconnect:true}),
 	db = mongo.Db('dns', mongoServer),
-	looper = function() {
+	loop = function() {
 		
 	};
 	
@@ -32,8 +32,11 @@ db.open(function(err,db) {
 															{$set:{'time':dnsData.time }},
 															{safe:true, upsert: true},
 															function(err,result) {
-																console.log(err);
-																console.log(result);
+																if (err!=null) {
+																	console.log(err);
+																} else if (result!=null) {
+																	console.log(result);
+																}
 															}
 														);
 							});
