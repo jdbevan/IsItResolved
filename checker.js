@@ -21,11 +21,11 @@ var dns = require('dns'),
 					}
 					callback(false);
 				} else {
-					hosts.sort();
+					hostsResponse = objectArraySort(hosts); //.sort();
 					if (response) {
-						response.write('records: ' + JSON.stringify(hosts) + "\n");
+						response.write('records: ' + JSON.stringify(hostsResponse) + "\n");
 					}
-					callback( {'host':host, 'dns':record, 'response':hosts, 'time':(new Date()).getTime()} );
+					callback( {'host':host, 'dns':record, 'response':hostsResponse, 'time':(new Date()).getTime()} );
 				}
 			});
 		} else {
@@ -36,11 +36,11 @@ var dns = require('dns'),
 					}
 					callback(false);
 				} else {
-					domains.sort();
+					domainsResponse = objectArraySort(domains);
 					if (response) {
-						response.write('domains: ' + JSON.stringify(domains) + "\n");
+						response.write('domains: ' + JSON.stringify(domainsResponse) + "\n");
 					}
-					callback( {'host':host, 'dns':record, 'response':domains, 'time':(new Date()).getTime()} );
+					callback( {'host':host, 'dns':record, 'response':domainsResponse, 'time':(new Date()).getTime()} );
 				}
 			});
 		}
@@ -90,6 +90,77 @@ var dns = require('dns'),
 		if (response) response.write("Looking up the " + record + " record for " + host + "\n");
 		
 		return true;
+	},
+	objectArraySort = function(a) {
+        var obj,
+            key,
+            newObj,
+            properties = [],
+            newArray = [];
+
+        // For each object in the array
+        // get their properties into one array
+        // and store their values in another (the keys in the array being the property names)
+        // then sort the properties alphabetically and construct a new object with the
+        // properties added alphabetically
+        for (obj in a) {
+            newObj = {};
+            properties[obj] = [];
+            if (a.hasOwnProperty(obj)) {
+                //console.log("Object " + obj);
+                // Get properties
+                for (key in a[obj]) {
+                    if (a[obj].hasOwnProperty(key)) {
+                        //console.log("Object[" + obj + "] has " + key + " = " + a[obj][key]);
+                        properties[obj].push( key );
+                    }
+                }
+                //console.log(properties);
+                // Sort properties
+                properties[obj].sort();
+                //console.log(properties[obj]);
+                // Create new object
+                for (key in properties[obj]) {
+                    if (properties[obj].hasOwnProperty(key)) {
+                        newObj[ properties[obj][key] ] = a[obj][ properties[obj][key] ];
+                    }
+                }
+                //console.log(newObj);
+                // Store newly sorted object
+                newArray.push(newObj);
+            }
+        }
+        //console.log(newArray);
+        // The sort the array, a, using a compare function which iterates over the properties
+        // of a, comparing them to b and returning 1, -1 or 0 at the point at which the values differ
+		newArray.sort(
+			function(a,b) {
+				var prop;
+				// Loop through properties in a
+				for (prop in a) {
+					if (a.hasOwnProperty(prop)) {
+						if (!b.hasOwnProperty(prop)) {
+							// If b is missing the property it is LESS THAN
+							//console.log("b doesnt have " + prop);
+							return -1;
+						} else {
+							// If b has property, and its less than or greater than
+							// return a value, otherwise continue the loop through
+							// a's properties
+							if (a[prop] > b[prop]) {
+								//console.log(a[prop] + " > " + b[prop]);
+								return 1;
+							} else if (a[prop] < b[prop]) {
+								//console.log(a[prop] + " < " + b[prop]);
+								return -1;
+							}
+						}
+					}
+				}
+				return 0;
+			}
+		);
+        return newArray;
 	},
 	errorHandler = function(e) {
 		var errorMsg = 'Sorry, ';
