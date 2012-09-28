@@ -106,6 +106,9 @@ var dns = require('dns'),
         for (obj in a) {
             newObj = {};
             properties[obj] = [];
+			if (typeof(a[obj])=='string' || typeof(a[obj])=='number') {
+				return a.sort();
+			}
             if (a.hasOwnProperty(obj)) {
                 //console.log("Object " + obj);
                 // Get properties
