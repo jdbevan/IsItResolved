@@ -165,6 +165,63 @@ var dns = require('dns'),
 		);
         return newArray;
 	},
+	objectsEqual = function(a,b) {
+		// If string, number, boolean
+		if (a === b) {
+			return true;
+		}
+		
+		if (typeof(a) !== typeof(b)){
+			return false;
+		} else if (typeof(a) == 'string' || typeof(a) == 'number' || typeof(a) == 'boolean' || typeof(a) == 'undefined') {
+			return (a === b);
+		}
+		
+		// Arrays
+		var aIsArray = (Object.prototype.toString.call(a) === "[object Array]"),
+			bIsArray = (Object.prototype.toString.call(b) === "[object Array]"),
+			key,
+			okKeys = [];
+		// Check both are same type: array or not array
+		if (aIsArray !== bIsArray) {
+			return false;
+		}
+		// Check all properties
+		for(key in a) {
+			if (a.hasOwnProperty(key)) {
+				if (b.hasOwnProperty(key)) {
+					// Return false if the two properties aren't equal
+					if (!objectsEqual(a[key], b[key])) {
+						return false;
+					} else {
+						// Store keys that have been dealt with
+						okKeys.push(key);
+					}
+				} else {
+					return false;
+				}
+			}
+		}
+		// Check all properties
+		for(key in b) {
+			if (okKeys.indexOf(key) != -1) {
+				// Ignore keys that have been dealt with
+				continue;
+			}
+			if (b.hasOwnProperty(key)) {
+				if (a.hasOwnProperty(key)) {
+					// This should never run, as we've already checked a's properties
+					// Return false if the two properties aren't equal
+					if (!objectsEqual(b[key], a[key])) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
+	},
 	errorHandler = function(e) {
 		var errorMsg = 'Sorry, ';
 		if (e.code != undefined) {
