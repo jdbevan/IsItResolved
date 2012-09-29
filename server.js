@@ -19,33 +19,58 @@ var http = require('http'),
 		
 		var args = request.url.split('/'),
 			host = args[1],
-			record = args[2];
+			record = args[2],
+			email = args[3],
+			frequency = args[4];
 
 		// Check request matches expected format
-		if (!request.url.match(/\/[a-zA-Z0-9-.]+\/[A-Za-z:]+/)) {
-			response.write("Requests should be in the format: /<domain name or ip address>/<dns record type>\n");
+		if (!request.url.match(/^\/[a-zA-Z0-9-.]+\/[A-Za-z:]+(\/[a-zA-Z0-9_+.=%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+\/(once|forever))?$/)) {
+			response.write("Requests should be in the format: /<domain name or ip address>/<dns record type> optionally followed by /<email address>/<alert frequency>\n");
 			response.write("\nWe currently support: A, AAAA, MX, TXT, SRV, NS and CNAME lookups for domain names and PTR record lookups for ip addresses.\n");
 			response.write("DKIM records can also be checked by specifying DKIM:<selector> as the dns record type.\n");
+			response.write("\nThe alert frequency can be either 'once' or 'forever'.\n");
 			response.end();
 			return;
 		}
 		
 		// Log request
-		console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
+		if (email && frequency) {
+			console.log('Requested updates on ' + record + ' records for ' + host + ' sent to <' + email + '> ' + frequency + ' at ' + new Date() + ' via ' + request.url);
+		} else {
+			console.log('Requested ' + record + ' record for ' + host + ' at ' + new Date() + ' via ' + request.url);
+		}
 
 		if (dns.checkRequest(host, record, response)) {
-			
 			dns.lookup(host, record, response, function(dnsData) {
-				if (dnsData) {
-					db.collection('hosts', function(err, collection) {
+				db.collection('hosts', function(err, collection) {
+					if (dnsData.error) {
+						collection.update( {'host':dnsData.host, 'dns':dnsData.dns, 'error':dnsData.error}, {$set:{'time':dnsData.time }},
+											{safe:true, upsert: true},
+											function(err) {
+												if (err) console.log(err);
+											});
+					} else {
 						collection.update( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response}, {$set:{'time':dnsData.time }},
 											{safe:true, upsert: true},
-											function(err,result) {
-												//console.log(err);
+											function(err) {
+												if (err) console.log(err);
+											});
+					}
+				});
+				if (email && frequency) {
+					response.write("\nRequesting alerts for <" + email + "> " + frequency);
+					db.collection('alerts', function(err, collection) {
+						collection.update( {'email':email, 'host': dnsData.host, 'dns':dnsData.dns},
+											{$set:{'frequency':frequency}},
+											{safe:true, upsert:true},
+											function (err) {
+												if (err) {
+													console.log(err);
+												}
 											});
 					});
-					response.end();
 				}
+				response.end();
 			});
 		} else {
 			response.end();
@@ -56,6 +81,7 @@ db.open(function(err,db) {
 	if (!err) {
 		// Setup collection if it doesnt exist
 		db.createCollection('hosts', function(err, collection) {});
+		db.createCollection('alerts', function(err, collection) {});
 	}
 });
 
