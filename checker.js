@@ -19,7 +19,7 @@ var dns = require('dns'),
 					if (response) {
 						response.write( errorHandler(err) + "\n" );
 					}
-					callback(false);
+					callback( {'host':host, 'dns':record, 'error':errorHandler(err), 'time':(new Date()).getTime()} );
 				} else {
 					hostsResponse = objectArraySort(hosts); //.sort();
 					if (response) {
@@ -34,7 +34,7 @@ var dns = require('dns'),
 					if (response) {
 						response.write( errorHandler( err ) + "\n" );
 					}
-					callback(false);
+					callback( {'host':host, 'dns':record, 'error':errorHandler(err), 'time':(new Date()).getTime()} );
 				} else {
 					domainsResponse = objectArraySort(domains);
 					if (response) {
@@ -54,10 +54,10 @@ var dns = require('dns'),
 				}
 				return false;
 			} else {
-				if (response) response.write(record + " is a valid IP address\n");
+				if (response) response.write(host + " is a valid IP address\n\n");
 			}
 		} else if (isAddress(host)) {
-			if (response) response.write(host + " is (hopefully) a valid domain name\n");
+			if (response) response.write(host + " is (hopefully) a valid domain name\n\n");
 		} else {
 			if (response) {
 				response.end(record + " does not appear to be a valid domain name or IP address\n");
@@ -80,7 +80,7 @@ var dns = require('dns'),
 			return false;
 		}
 
-		if (isAddress && record == 'PTR') {
+		if (isAddress(host) && record == 'PTR') {
 			if (response) {
 				response.end(record + " is only a valid DNS lookup for IP addresses.\n");
 			}
@@ -310,3 +310,4 @@ var dns = require('dns'),
 
 exports.checkRequest = checkRequest;
 exports.lookup = lookup;
+exports.objectsEqual = objectsEqual;
