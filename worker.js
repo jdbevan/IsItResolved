@@ -79,7 +79,8 @@ db.open(function(err,db) {
 		// Setup collection if it doesnt exist
 		db.collection('hosts', function(err, collection) {
 		
-			var t = setTimeout(looper, 30*60, err, collection);
+			looper(err, collection);
+			var t = setInterval(looper, 5*60*1000, err, collection);
 
 		});
 	}
