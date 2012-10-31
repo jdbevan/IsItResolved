@@ -5,11 +5,11 @@ var mongo = require('mongodb'),
 	/* Setup mongo server connection */
 	mongoServer = new mongo.Server('localhost', 27017, {auto_reconnect:true}),
 	db = mongo.Db('dns', mongoServer),
-	looper = function(err, collection) {
+	looper = function(err, hosts) {
 		
 		console.log("Checking @ " + (new Date()));
 		
-		var stream = collection.find().streamRecords();
+		var stream = hosts.find().streamRecords();
 		
 		stream.on("data", function(item) {
 			var record = item.dns,
@@ -19,8 +19,8 @@ var mongo = require('mongodb'),
 			if (dns.checkRequest(host, record, false)) {
 				dns.lookup(host, record, false, function(dnsData) {
 					// update collection
-					db.collection('hosts', function(err, collection) {
-						updateDatabase(collection, dnsData);
+					db.collection('hosts', function(err, hosts) {
+						updateDatabase(hosts, dnsData);
 					});
 				});
 			}
@@ -30,6 +30,13 @@ var mongo = require('mongodb'),
 		});
 	},
 	markAsChanged = function(result, dnsData) {
+		// Open collection - create on insert if nonexistent
+		db.collection('alerts', function(err,alerts) {
+			alerts.find({'host': dnsData.host, 'dns':dnsData.dns}).toArray(function(err,docs){
+				
+			});
+		});
+
 		// Result contains original record
 		if (dnsData.error && !dns.objectsEqual(result.error, dnsData.response ? dnsData.response : dnsData.error)) {
 			var email = "<p>Hi,</p>\n<p>At approximately " + (new Date()) + ", we checked the following DNS record and got an error:</p>\n";
@@ -37,12 +44,6 @@ var mongo = require('mongodb'),
 			email += "<p>The error message: <strong>" + dnsData.error + "</strong></p>\n";
 			email += "<p>Previously, the record resolved to: " + (result.response ? result.response : result.error) + "</p>\n";
 			email += "<p>Thanks,<br>\nJon</p>";
-			
-			mailer.sendEmail("Jon Bevan <jon@wearesomethingsimple.com>",
-							"Jon Bevan <jon@edgeoftheweb.co.uk>",
-							"DNS change for " + dnsData.host + " (" + dnsData.dns + ")",
-							email);
-			return;
 		}
 		if (!dns.objectsEqual(result.response, dnsData.response)) {
 			//changed.push({'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response});
@@ -51,15 +52,15 @@ var mongo = require('mongodb'),
 			email += "<p>and now resolves to: <strong>" + JSON.stringify( dnsData.response, null, ' ' ) + "</strong></p>\n";
 			email += "<p>Previously, the record resolved to: " + JSON.stringify( result.response, null, ' ' ) + "</p>\n";
 			email += "<p>Thanks,<br>\nJon</p>";
-			
-			mailer.sendEmail("Jon Bevan <jon@wearesomethingsimple.com>",
-							"Jon Bevan <jon@edgeoftheweb.co.uk>",
-							"DNS change for " + dnsData.host + " (" + dnsData.dns + ")",
-							email);
 		}
+
+		mailer.sendEmail("Jon Bevan <jon@wearesomethingsimple.com>",
+						"Jon Bevan <jon@edgeoftheweb.co.uk>",
+						"DNS change for " + dnsData.host + " (" + dnsData.dns + ")",
+						email);
 	},
-	updateDatabase = function(collection, dnsData) {
-		collection.findAndModify( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response},
+	updateDatabase = function(hosts, dnsData) {
+		hosts.findAndModify( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response},
 									[['time','desc']],
 									{$set:{'time':dnsData.time }},
 									{safe:true, upsert: true},
@@ -76,11 +77,11 @@ var mongo = require('mongodb'),
 	
 db.open(function(err,db) {
 	if (!err) {
-		// Setup collection if it doesnt exist
-		db.collection('hosts', function(err, collection) {
+		// Open collection - create on insert if nonexistent
+		db.collection('hosts', function(err, hosts) {
 		
-			looper(err, collection);
-			var t = setInterval(looper, 5*60*1000, err, collection);
+			looper(err, hosts);
+			var t = setInterval(looper, 5*60*1000, err, hosts);
 
 		});
 	}
