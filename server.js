@@ -42,15 +42,15 @@ var http = require('http'),
 
 		if (dns.checkRequest(host, record, response)) {
 			dns.lookup(host, record, response, function(dnsData) {
-				db.collection('hosts', function(err, collection) {
+				db.collection('hosts', function(err, hosts) {
 					if (dnsData.error) {
-						collection.update( {'host':dnsData.host, 'dns':dnsData.dns, 'error':dnsData.error}, {$set:{'time':dnsData.time }},
+						hosts.update( {'host':dnsData.host, 'dns':dnsData.dns, 'error':dnsData.error}, {$set:{'time':dnsData.time }},
 											{safe:true, upsert: true},
 											function(err) {
 												if (err) console.log(err);
 											});
 					} else {
-						collection.update( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response}, {$set:{'time':dnsData.time }},
+						hosts.update( {'host':dnsData.host, 'dns':dnsData.dns, 'response':dnsData.response}, {$set:{'time':dnsData.time }},
 											{safe:true, upsert: true},
 											function(err) {
 												if (err) console.log(err);
@@ -59,8 +59,8 @@ var http = require('http'),
 				});
 				if (email && frequency) {
 					response.write("\nRequesting alerts for <" + email + "> " + frequency);
-					db.collection('alerts', function(err, collection) {
-						collection.update( {'email':email, 'host': dnsData.host, 'dns':dnsData.dns},
+					db.collection('alerts', function(err, alerts) {
+						alerts.update( {'email':email, 'host': dnsData.host, 'dns':dnsData.dns},
 											{$set:{'frequency':frequency}},
 											{safe:true, upsert:true},
 											function (err) {
