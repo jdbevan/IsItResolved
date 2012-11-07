@@ -9,7 +9,8 @@ var mongo = require('mongodb'),
 		
 		console.log("Checking @ " + (new Date()));
 		
-		var stream = hosts.find().streamRecords();
+		// Sort by time descending
+		var stream = hosts.find().sort({time:-1}).streamRecords();
 		
 		stream.on("data", function(item) {
 			var record = item.dns,
