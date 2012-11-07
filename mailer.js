@@ -6,10 +6,11 @@ var	mailer = require('nodemailer'),
 			pass: ""
 		}
 	});
-exports.sendEmail = function(to, from, subject, message) {
+exports.sendEmail = function(to, from, bcc, subject, message) {
 	smtp.sendMail({
 			from: from,
 			to: to,
+			bcc: bcc,
 			subject: subject,
 			html: message,
 			generateTextFromHTML: true
